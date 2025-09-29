@@ -33,7 +33,7 @@ const HomeScreens = () => {
         </Message>
       ) : (
         <>
-          <h1>Testing our test lol</h1>
+          <h1>Latest products</h1>
           <Row>
             {data.products.map((product) => (
               <Col key={product._id} sm={12} md={6} lg={4} xl={3}>

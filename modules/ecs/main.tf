@@ -303,6 +303,24 @@ resource "aws_codedeploy_deployment_group" "app" {
     deployment_type   = "BLUE_GREEN"
   }
 
+  blue_green_deployment_config {
+    # ADD THIS REQUIRED BLOCK
+    deployment_ready_option {
+      action_on_timeout = "CONTINUE_DEPLOYMENT"
+      # Optional: wait_time_in_minutes = 0  # Default is 0 for immediate deployment
+    }
+
+    # This section defines what happens to the old "blue" tasks after a successful deployment
+    terminate_blue_instances_on_deployment_success {
+      # Terminate the old tasks to save costs.
+      action = "TERMINATE" 
+      # How long to wait before terminating the old tasks, allowing for connection draining.
+      termination_wait_time_in_minutes = 5 
+    }
+  }
+
+
+
   tags = local.common_tags
 }
 
