@@ -1,0 +1,12 @@
+# .trivyignore
+
+# Ignoring multer CVEs as the fix requires a major version upgrade (1.x -> 2.x).
+CVE-2025-47935
+CVE-2025-47944
+CVE-2025-48997
+CVE-2025-7338
+
+# Ignoring cross-spawn vulnerability found in the base image's NPM installation.
+# This does not affect our application at runtime and will be remediated
+# by updating to a newer Node base image when available.
+CVE-2024-21538

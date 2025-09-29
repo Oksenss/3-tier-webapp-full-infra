@@ -1,0 +1,59 @@
+name: Deploy to Development
+
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-dev:
+    name: Build and Deploy to Development
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.DEV_AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Backend Docker Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/${{ secrets.DEV_ECR_REPOSITORY }}:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/${{ secrets.DEV_ECR_REPOSITORY }}:$IMAGE_TAG $ECR_REGISTRY/${{ secrets.DEV_ECR_REPOSITORY }}:latest
+          docker push $ECR_REGISTRY/${{ secrets.DEV_ECR_REPOSITORY }}:$IMAGE_TAG
+          docker push $ECR_REGISTRY/${{ secrets.DEV_ECR_REPOSITORY }}:latest
+        working-directory: ./backend
+
+      - name: Deploy Backend to ECS
+        run: |
+          aws ecs update-service --cluster ${{ secrets.DEV_ECS_CLUSTER_NAME }} --service ${{ secrets.DEV_ECS_SERVICE_NAME }} --force-new-deployment
+
+      - name: Build Frontend
+        run: |
+          npm install
+          npm run build
+        working-directory: ./frontend
+
+      - name: Deploy Frontend to S3
+        run: |
+          aws s3 sync ./build s3://${{ secrets.DEV_S3_BUCKET_NAME }} --delete
+        working-directory: ./frontend
+
+      - name: Invalidate CloudFront Cache
+        run: |
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.DEV_CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"

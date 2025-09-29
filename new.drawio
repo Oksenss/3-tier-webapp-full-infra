@@ -1,0 +1,80 @@
+graph TD
+    subgraph "Clients"
+        Users(["Users"])
+    end
+
+    subgraph "Global Services & Edge"
+        Route53("Route 53")
+        Cloudfront("Cloudfront")
+        ACM("ACM")
+        S3Frontend("S3 Frontend")
+    end
+
+    subgraph "Public Application Layer"
+        subgraph Public_subnet_A["Public subnet"]
+            style Public_subnet_A fill:#d9e7d9,stroke:#66a566,stroke-width:2px;
+            ALB(["ALB \n (Multi-AZ)"]) %% ALB is shown within one public subnet, but it spans others
+        end
+        %% We infer Public_subnet_B also exists where ALB components would reside
+        %% based on a proper multi-AZ setup, but don't duplicate the icon.
+    end
+
+    subgraph "Private Subnets"
+        subgraph Private_subnet1["Private subnet (AZ1)"]
+            style Private_subnet1 fill:#e0f2f7,stroke:#66b5c3,stroke-width:2px;
+            subgraph Backend1["Backend"]
+                style Backend1 fill:#fff3e0,stroke:#ff9800,stroke-width:2px;
+                ECSCluster1(ECS Cluster)
+                subgraph AutoScalingGroup1["Auto Scaling group"]
+                    style AutoScalingGroup1 fill:#ffe0b2,stroke:#ffb74d,stroke-width:2px,stroke-dasharray: 5 5;
+                    Task1_1(Task 1)
+                    Task1_2(Task 2)
+                    direction LR
+                end
+                ECSCluster1 --- AutoScalingGroup1
+            end
+            DocumentDB_AZ1("AWS DocumentDB")
+        end
+
+        subgraph Private_subnet2["Private subnet (AZ2)"]
+            style Private_subnet2 fill:#e0f2f7,stroke:#66b5c3,stroke-width:2px;
+            subgraph Backend2["Backend"]
+                style Backend2 fill:#fff3e0,stroke:#ff9800,stroke-width:2px;
+                ECSCluster2(ECS Cluster)
+                subgraph AutoScalingGroup2["Auto Scaling group"]
+                    style AutoScalingGroup2 fill:#ffe0b2,stroke:#ffb74d,stroke-width:2px,stroke-dasharray: 5 5;
+                    Task2_1(Task 1)
+                    Task2_2(Task 2)
+                    direction LR
+                end
+                ECSCluster2 --- AutoScalingGroup2
+            end
+            DocumentDB_AZ2("AWS DocumentDB")
+        end
+    end
+
+    Users --> Route53
+    Route53 --> Cloudfront
+    Cloudfront -- uses HTTPS cert --> ACM
+    Cloudfront -- serves static content from --> S3Frontend
+
+    %% CloudFront routes dynamic requests to the ALB
+    Cloudfront -- routes dynamic traffic to --> ALB
+
+    %% ALB distributes traffic to backends in both AZs
+    ALB -- routes to --> Backend1
+    ALB -- routes to --> Backend2
+
+    %% Backends connect to their respective DocumentDB endpoints
+    ECSCluster1 --> DocumentDB_AZ1
+    ECSCluster2 --> DocumentDB_AZ2
+
+
+    style Users fill:#e0e0e0, stroke:#333
+    style Route53 fill:#e1bee7, stroke:#9b59b6
+    style Cloudfront fill:#e1bee7, stroke:#9b59b6
+    style ACM fill:#fadde1, stroke:#e74c3c
+    style S3Frontend fill:#dcecdc, stroke:#27ae60
+    style ALB fill:#c8e6c9, stroke:#4CAF50
+    style DocumentDB_AZ1 fill:#e1bee7,stroke:#9c27b0,stroke-width:2px;
+    style DocumentDB_AZ2 fill:#e1bee7,stroke:#9c27b0,stroke-width:2px;

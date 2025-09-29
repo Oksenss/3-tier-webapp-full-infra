@@ -1,0 +1,57 @@
+# .github/workflows/test.yml
+
+name: CI Checks
+
+# This workflow runs on every Pull Request that targets the 'develop' branch
+on:
+  pull_request:
+    branches: ["develop", "main"]
+
+jobs:
+  # Job 1: Run tests on the frontend application
+  test-frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18" # Use the same major version as your backend
+
+      - name: Install Frontend Dependencies
+        # Use 'npm ci' for faster, more reliable installs in CI environments
+        run: cd frontend && npm ci
+
+      - name: Run Frontend Tests
+        # The key is '-- --watchAll=false'. This tells Jest to run all tests once
+        # and then exit, instead of entering the interactive "watch mode".
+        run: cd frontend && npm test -- --watchAll=false --passWithNoTests
+
+  # Job 2: Scan the backend Docker image for security vulnerabilities
+  scan-backend-image:
+    name: Scan Backend Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build an image for scanning
+        # We build the image here just for the purpose of scanning it.
+        # The tag is local to this job and doesn't get pushed anywhere.
+        run: docker build -t backend-scan:latest ./backend
+
+      - name: Run Trivy vulnerability scanner
+        # This action scans the image we just built
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "backend-scan:latest"
+          format: "table"
+          # Fail the build if HIGH or CRITICAL severity vulnerabilities are found
+          exit-code: "1"
+          # Don't fail the build for vulnerabilities that don't have a fix yet
+          ignore-unfixed: true
+          # Only report on these severity levels
+          severity: "HIGH,CRITICAL"

@@ -1,0 +1,12 @@
+# Ignore local dependencies
+node_modules
+
+# Ignore environment files
+.env
+
+# Ignore logs
+*.log
+
+# Ignore git files
+.git
+.gitignore

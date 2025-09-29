@@ -1,0 +1,62 @@
+# .github/workflows/terraform-plan.yml
+name: Terraform Plan
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "environments/**" # CRITICAL: Only run if terraform files change
+
+permissions:
+  id-token: write # for AWS auth
+  contents: read
+  pull-requests: write # to post a comment on the PR
+
+jobs:
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # This assumes your DEV role has read-only access to PROD state, or you use separate roles
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # Use the DEV role for planning, as it should have read access to state files
+          role-to-assume: ${{ secrets.DEV_AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: ./infra
+
+      # Determine which environment to plan for based on the PR's TARGET branch
+      - name: Terraform Init (for Dev)
+        if: github.base_ref == 'develop'
+        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+        working-directory: ./environments/dev
+
+      - name: Terraform Plan (for Dev)
+        if: github.base_ref == 'develop'
+        run: terraform plan -no-color
+        working-directory: ./environments/dev
+
+      - name: Terraform Init (for Prod)
+        if: github.base_ref == 'main'
+        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+        working-directory: ./environments/prod
+
+      - name: Terraform Plan (for Prod)
+        if: github.base_ref == 'main'
+        run: terraform plan -no-color
+        working-directory: ./environments/prod
+
+      # You can add actions here later to post the plan output to the PR
