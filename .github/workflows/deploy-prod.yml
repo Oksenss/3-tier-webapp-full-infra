@@ -85,12 +85,21 @@ jobs:
       - name: Start Blue/Green Deployment
         id: deploy
         run: |
-          APPSPEC_CONTENT=$(jq -c . < ${{ steps.appspec.outputs.appspec_path }})
+          # Use jq to properly build the revision JSON with escaped content
+          REVISION_JSON=$(jq -n \
+            --slurpfile appspec ${{ steps.appspec.outputs.appspec_path }} \
+            '{
+              revisionType: "AppSpecContent",
+              appSpecContent: {
+                content: ($appspec[0] | tostring)
+              }
+            }')
+
           DEPLOYMENT_ID=$(aws deploy create-deployment \
             --application-name ${{ secrets.CODEDEPLOY_APP_NAME }} \
             --deployment-group-name ${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP_NAME }} \
             --description "Deployment for commit ${{ github.sha }}" \
-            --revision "{\"revisionType\":\"AppSpecContent\",\"appSpecContent\":{\"content\":\"$APPSPEC_CONTENT\"}}" \
+            --revision "$REVISION_JSON" \
             --query 'deploymentId' --output text)
           echo "deployment_id=$DEPLOYMENT_ID" >> $GITHUB_OUTPUT
 
