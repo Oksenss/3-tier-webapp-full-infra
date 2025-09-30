@@ -173,43 +173,6 @@ resource "aws_ecs_task_definition" "app" {
 # ECS Service & Load Balancing                         #
 #########################################################
 
-#################################################
-# OLD - ECS Service without CodeDeploy         #
-#################################################
-
-# resource "aws_ecs_service" "app" {
-#   name            = "${var.name_prefix}-app-service"
-#   cluster         = aws_ecs_cluster.main.id
-#   task_definition = aws_ecs_task_definition.app.arn
-#   desired_count   = var.desired_count
-#   launch_type     = "FARGATE"
-
-#   network_configuration {
-#     subnets         = var.private_subnet_ids
-#     security_groups = var.ecs_security_group_ids
-#   }
-
-#   load_balancer {
-#     target_group_arn = var.lb_target_group_arn
-#     container_name   = local.container_name
-#     container_port   = var.container_port
-#   }
-
-#   # This allows terraform to change desired_count without being reverted by autoscaling
-#   lifecycle {
-#     ignore_changes = [desired_count]
-#   }
-
-#   tags = merge(
-#     local.common_tags,
-#     {
-#       Name = "${var.name_prefix}-app-service"
-#     }
-#   )
-# }
-
-
-
 ###########################################################
 # NEW - ECS Service with CodeDeploy Blue/Green Deployment #
 ###########################################################

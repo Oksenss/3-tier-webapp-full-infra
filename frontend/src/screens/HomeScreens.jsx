@@ -1,6 +1,11 @@
 import { Row, Col } from "react-bootstrap";
 import Product from "../components/Product";
-import { useGetProductsQuery } from "../slices/productsApiSlice";
+// vvv IMPORT THE NEW HOOK ALONG WITH THE EXISTING ONE vvv
+import {
+  useGetProductsQuery,
+  useGetTestMessageQuery, // 1. Import the new hook
+} from "../slices/productsApiSlice";
+// ^^^ IMPORT THE NEW HOOK ALONG WITH THE EXISTING ONE ^^^
 import Loader from "../components/Loader";
 import Message from "../components/Message";
 import { Link, useParams } from "react-router-dom";
@@ -14,6 +19,11 @@ const HomeScreens = () => {
     keyword,
     pageNumber,
   });
+
+  // 2. Call the new hook to fetch data.
+  // We use "data: testData" to rename 'data' so it doesn't conflict
+  // with the 'data' from useGetProductsQuery.
+  const { data: testData } = useGetTestMessageQuery();
 
   return (
     <>
@@ -34,6 +44,10 @@ const HomeScreens = () => {
       ) : (
         <>
           <h1>Latest products</h1>
+
+          {/* 3. Render the message from the new endpoint */}
+          {testData && <Message variant="success">{testData.message}</Message>}
+
           <Row>
             {data.products.map((product) => (
               <Col key={product._id} sm={12} md={6} lg={4} xl={3}>

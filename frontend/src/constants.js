@@ -7,3 +7,5 @@ export const USERS_URL = `/api/users`;
 export const ORDERS_URL = `/api/orders`;
 export const UPLOADS_URS = `/api/uploads`;
 export const PAYPAL_URL = `/api/config/paypal`;
+
+export const TEST_MESSAGE_URL = `/api/new-test-endpoint`;
