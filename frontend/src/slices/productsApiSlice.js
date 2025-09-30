@@ -81,4 +81,5 @@ export const {
   useDeleteProductMutation,
   useCreateReviewMutation,
   useGetTopProductsQuery,
+  useGetTestMessageQuery,
 } = productsApiSlice;
