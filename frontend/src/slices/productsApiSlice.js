@@ -1,4 +1,4 @@
-import { PRODUCTS_URL, UPLOADS_URS } from "../constants";
+import { PRODUCTS_URL, UPLOADS_URS, TEST_MESSAGE_URL } from "../constants";
 import { apiSlice } from "./apiSlice";
 
 export const productsApiSlice = apiSlice.injectEndpoints({
@@ -63,6 +63,12 @@ export const productsApiSlice = apiSlice.injectEndpoints({
       }),
       keepUnusedDataFor: 5,
     }),
+    getTestMessage: builder.query({
+      query: () => ({
+        url: TEST_MESSAGE_URL,
+      }),
+      keepUnusedDataFor: 5, // Optional, but consistent with your other queries
+    }),
   }),
 });
 // convention when exporting
@@ -75,4 +81,5 @@ export const {
   useDeleteProductMutation,
   useCreateReviewMutation,
   useGetTopProductsQuery,
+  useGetTestMessageQuery,
 } = productsApiSlice;
