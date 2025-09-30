@@ -41,6 +41,13 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+app.get("/api/new-test-endpoint", (req, res) => {
+  res.status(200).json({
+    message: "This is a new test endpoint!",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // test route
 // route for products go to /routes/productRoutes
 app.use("/api/products", productRoutes);

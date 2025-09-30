@@ -49,48 +49,6 @@ resource "aws_lb" "main" {
 # Target Group  (Blue/Green or Single)                  #
 #########################################################
 
-
-#########################################################
-# OLD RESOURCE LEFT FOR REFERENCE - SINGLE TARGET GROUP #
-#########################################################
-
-
-# resource "aws_lb_target_group" "app" {
-#   name        = local.target_group_name
-#   port        = var.target_port
-#   protocol    = var.target_protocol
-#   vpc_id      = var.vpc_id
-#   target_type = "ip"  # Required for Fargate
-
-#   health_check {
-#     enabled             = true
-#     healthy_threshold   = var.health_check_healthy_threshold
-#     unhealthy_threshold = var.health_check_unhealthy_threshold
-#     timeout             = var.health_check_timeout
-#     interval            = var.health_check_interval
-#     path                = var.health_check_path
-#     matcher             = var.health_check_matcher
-#     port                = "traffic-port"
-#     protocol            = var.target_protocol
-#   }
-
-#   # Ensure proper deregistration
-#   deregistration_delay = 30
-
-#   tags = merge(
-#     local.common_tags,
-#     {
-#       Name = local.target_group_name
-#     }
-#   )
-
-#   # Allow target group to be recreated if needed
-#   lifecycle {
-#     create_before_destroy = true
-#   }
-# }
-
-
 ##################################################################################################
 # NEW RESOURCES FOR BLUE/GREEN DEPLOYMENT - TWO TARGET GROUPS (3 total 2 for prod and 1 for dev) #
 ##################################################################################################
@@ -194,25 +152,6 @@ resource "aws_lb_target_group" "app_single" {
 #########################################################
 # HTTPS Listener                                       #
 #########################################################
-
-
-#########################################################
-# OLD RESOURCE LEFT FOR REFERENCE - SINGLE TARGET GROUP #
-#########################################################
-
-# resource "aws_lb_listener" "https" {
-#   load_balancer_arn = aws_lb.main.arn
-#   port              = "443"
-#   protocol          = "HTTPS"
-#   certificate_arn   = var.certificate_arn
-
-#   default_action {
-#     type             = "forward"
-#     target_group_arn = aws_lb_target_group.app.arn
-#   }
-
-#   tags = local.common_tags
-# }
 
 ##################################################################################################
 # NEW RESOURCE FOR BLUE/GREEN DEPLOYMENT - AWS LISTENER RULES TO SPLIT TRAFFIC BETWEEN TARGET GROUPS #
