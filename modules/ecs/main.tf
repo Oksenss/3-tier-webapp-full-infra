@@ -104,9 +104,7 @@ resource "aws_iam_role_policy_attachment" "codedeploy_policy_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS"
 }
 
-#########################################
-#########################################
-#########################################
+
 
 #########################################################
 # ECS Cluster & Task Definition                        #
@@ -172,10 +170,6 @@ resource "aws_ecs_task_definition" "app" {
 #########################################################
 # ECS Service & Load Balancing                         #
 #########################################################
-
-###########################################################
-# NEW - ECS Service with CodeDeploy Blue/Green Deployment #
-###########################################################
 
 resource "aws_ecs_service" "app" {
   name    = "${var.name_prefix}-app-service"

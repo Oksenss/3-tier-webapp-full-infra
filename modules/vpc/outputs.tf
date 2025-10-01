@@ -14,8 +14,6 @@ output "vpc_cidr" {
   value = aws_vpc.main.cidr_block
 }
 
-# Add this new output to modules/vpc/outputs.tf
-
 output "private_route_table_ids" {
   description = "List of IDs of private route tables"
   value       = aws_route_table.private[*].id

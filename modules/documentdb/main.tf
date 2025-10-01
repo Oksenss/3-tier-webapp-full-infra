@@ -66,7 +66,7 @@ resource "aws_docdb_subnet_group" "main" {
 
 resource "aws_docdb_cluster_parameter_group" "main" {
   name   = "${var.environment}-docdb-params"
-  family = var.docdb_family # [CHANGED] Made configurable
+  family = var.docdb_family #  Configurable
 
   parameter {
     name  = "tls"
@@ -141,7 +141,7 @@ resource "aws_docdb_cluster_instance" "main" {
     local.common_tags,
     {
       Name = "${var.environment}-docdb-instance-${count.index + 1}"
-      # [KEPT] The data source is used here to add a helpful AZ tag.
+      # The data source is used here to add a helpful AZ tag.
       AZ = data.aws_subnet.private[count.index % length(var.private_subnet_ids)].availability_zone
     }
   )

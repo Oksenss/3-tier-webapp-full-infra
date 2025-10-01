@@ -15,7 +15,7 @@ terraform {
     }
   }
   backend "s3" {
-    bucket         = "my-blue-green-depl-tf-state"
+    bucket         = "my-blue-green-depl-tf-state" # <---- Use your bucket name
     key            = "tf-state-dev"
     region         = "eu-central-1"
     use_lockfile = true
@@ -45,9 +45,9 @@ data "aws_availability_zones" "available" {
 
 locals {
     dev_azs = slice(data.aws_availability_zones.available.names, 0, 2)
-    domain_name = "dev.my-database-vector-ai.click" # <--- DEFINE YOUR DOMAIN HERE
+    domain_name = "dev.my-database-vector-ai.click" # <---- DEFINE YOUR DOMAIN HERE
     environment = "dev"
-    parent_domain_name  = "my-database-vector-ai.click"
+    parent_domain_name  = "my-database-vector-ai.click" # <---- DEFINE YOUR DOMAIN HERE
     prefix = "dev"
 }
 
@@ -99,14 +99,9 @@ module "nat" {
   vpc_id             = module.vpc.vpc_id
   public_subnet_ids  = module.vpc.public_subnet_ids
 
-  # REMOVE this line. The NAT module no longer needs to know about subnets.
-  # private_subnet_ids = module.vpc.private_subnet_ids 
-
-  # ADD this line. This passes the route tables created by the VPC module
-  # into the NAT module so it can add its route.
   private_route_table_ids = module.vpc.private_route_table_ids
 
-  single_nat_gateway = true  # Cost optimization for dev
+  single_nat_gateway = true  
 
   tags = {
     Environment = local.environment

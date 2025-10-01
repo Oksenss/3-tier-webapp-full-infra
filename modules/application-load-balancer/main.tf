@@ -4,7 +4,6 @@
 
 locals {
   alb_name = "${var.name_prefix}-alb"
-  target_group_name = "${var.name_prefix}-app-tg"
   target_group_name_blue = "${var.name_prefix}-blue-tg"
   target_group_name_green = "${var.name_prefix}-green-tg"
 
@@ -48,11 +47,6 @@ resource "aws_lb" "main" {
 #########################################################
 # Target Group  (Blue/Green or Single)                  #
 #########################################################
-
-##################################################################################################
-# NEW RESOURCES FOR BLUE/GREEN DEPLOYMENT - TWO TARGET GROUPS (3 total 2 for prod and 1 for dev) #
-##################################################################################################
-
 resource "aws_lb_target_group" "app_blue" {
   ### MODIFIED ###
   count = var.enable_blue_green ? 1 : 0 
@@ -137,7 +131,7 @@ resource "aws_lb_target_group" "app_single" {
   tags = merge(
     local.common_tags,
     {
-      Name = local.target_group_name
+      Name = local.target_group_name_single
     }
   )
 
@@ -152,11 +146,6 @@ resource "aws_lb_target_group" "app_single" {
 #########################################################
 # HTTPS Listener                                       #
 #########################################################
-
-##################################################################################################
-# NEW RESOURCE FOR BLUE/GREEN DEPLOYMENT - AWS LISTENER RULES TO SPLIT TRAFFIC BETWEEN TARGET GROUPS #
-###################################################################################################
-
 resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.main.arn
   port              = "443"
