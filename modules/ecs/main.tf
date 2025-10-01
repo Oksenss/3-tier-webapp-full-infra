@@ -352,3 +352,31 @@ resource "aws_iam_role_policy_attachment" "ecs_secrets_manager_access" {
   policy_arn = aws_iam_policy.secrets_manager_access.arn
 }
 
+
+
+# Some policy changes
+resource "aws_iam_policy" "s3_image_upload_policy" {
+  name        = "${var.name_prefix}-s3-image-upload-policy"
+  description = "Allow ECS tasks to upload product images to S3"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:PutObject",
+          "s3:PutObjectAcl", # Required to set public-read if needed, though we use CF
+          "s3:GetObject"     # Good to have for potential debugging
+        ],
+        Resource = "${var.image_bucket_arn}/*"
+      }
+    ]
+  })
+}
+
+### NEW: Attach the policy to the app task role ###
+resource "aws_iam_role_policy_attachment" "app_task_s3_upload" {
+  role       = aws_iam_role.app_task_role.name
+  policy_arn = aws_iam_policy.s3_image_upload_policy.arn
+}

@@ -155,3 +155,10 @@ variable "lb_target_group_green_name" {
   type        = string
   default     = ""
 }
+
+
+
+variable "image_bucket_arn" {
+  description = "ARN of the S3 bucket for product images."
+  type        = string
+}

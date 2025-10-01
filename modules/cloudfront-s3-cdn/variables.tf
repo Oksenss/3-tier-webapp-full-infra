@@ -23,3 +23,22 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+
+# modules/cloudfront-s3-cdn/variables.tf
+
+variable "image_bucket_name" {
+  description = "The name of the S3 bucket holding product images."
+  type        = string
+}
+
+variable "image_bucket_domain_name" {
+  description = "The regional domain name of the S3 bucket for images."
+  type        = string
+}
+
+# Add a new output for the images OAC
+output "images_oac_id" {
+  description = "The ID of the Origin Access Control for the images bucket."
+  value       = aws_cloudfront_origin_access_control.images_oac.id
+}
