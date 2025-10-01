@@ -53,7 +53,7 @@ resource "aws_acm_certificate_validation" "cloudfront_cert" {
 }
 
 #########################################################
-# Regional Certificate (for ALB) - NEW                #
+# Regional Certificate (for ALB)                        #
 #########################################################
 
 # 4. Request a new SSL certificate in the regional provider for ALB

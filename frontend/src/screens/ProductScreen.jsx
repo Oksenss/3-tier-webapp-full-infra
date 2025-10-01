@@ -44,6 +44,8 @@ const ProductScreen = () => {
     error,
   } = useGetProductDetailsQuery(productId);
 
+  console.log(product);
+
   const { userInfo } = useSelector((state) => state.auth);
 
   const [createReview, { isLoading: loadingProductReview }] =
@@ -129,7 +131,8 @@ const ProductScreen = () => {
                           <Form.Control
                             as="select"
                             value={qty}
-                            onChange={(e) => setQty(Number(e.target.value))}>
+                            onChange={(e) => setQty(Number(e.target.value))}
+                          >
                             {[...Array(product.countInStock).keys()].map(
                               (x) => (
                                 <option key={x + 1} value={x + 1}>
@@ -148,7 +151,8 @@ const ProductScreen = () => {
                       className="btn-block"
                       type="button"
                       disabled={product.countInStock === 0}
-                      onClick={addToCartHandler}>
+                      onClick={addToCartHandler}
+                    >
                       Add To Cart
                     </Button>
                   </ListGroup.Item>
@@ -182,7 +186,8 @@ const ProductScreen = () => {
                           as="select"
                           required
                           value={rating}
-                          onChange={(e) => setRating(e.target.value)}>
+                          onChange={(e) => setRating(e.target.value)}
+                        >
                           <option value="">Select...</option>
                           <option value="1">1 - Poor</option>
                           <option value="2">2 - Fair</option>
@@ -198,14 +203,14 @@ const ProductScreen = () => {
                           row="3"
                           required
                           value={comment}
-                          onChange={(e) =>
-                            setComment(e.target.value)
-                          }></Form.Control>
+                          onChange={(e) => setComment(e.target.value)}
+                        ></Form.Control>
                       </Form.Group>
                       <Button
                         disabled={loadingProductReview}
                         type="submit"
-                        variant="primary">
+                        variant="primary"
+                      >
                         Submit
                       </Button>
                     </Form>

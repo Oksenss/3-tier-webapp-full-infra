@@ -8,6 +8,17 @@ resource "aws_cloudfront_origin_access_control" "default" {
   signing_protocol                  = "sigv4"
 }
 
+### NEW: Create a second OAC for the images bucket ###
+resource "aws_cloudfront_origin_access_control" "images_oac" {
+  name                              = "${var.image_bucket_name}-oac"
+  description                       = "OAC for ${var.image_bucket_name}"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+
+
 # 2. Define managed policies for caching and headers.
 # This makes the main distribution resource much cleaner.
 data "aws_cloudfront_cache_policy" "caching_optimized" {
@@ -61,6 +72,18 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     }
   }
 
+  ### NEW: Origin 3: S3 bucket for product images ###
+  origin {
+    origin_id   = "s3_origin_images"
+    domain_name = var.image_bucket_domain_name
+
+    # Remove the `/images` prefix when requesting from S3
+    origin_path = "/images" 
+
+    # Connect this origin to the new images OAC
+    origin_access_control_id = aws_cloudfront_origin_access_control.images_oac.id
+  }
+
   # Default Behavior: Serve the frontend from S3
   default_cache_behavior {
     target_origin_id = "s3_origin_${var.bucket_name}"
@@ -73,7 +96,24 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security_headers.id
   }
 
-  # Ordered Behavior 1: Route /api/* to the backend
+  ### NEW: Ordered Behavior 1: Route /images/* to the images S3 bucket ###
+  # This must come before the /api/* rule if you have images in your API.
+  # Placed here, it's checked second, after the API.
+  ordered_cache_behavior {
+    path_pattern     = "/images/*"
+    target_origin_id = "s3_origin_images"
+
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD", "OPTIONS"]
+    viewer_protocol_policy = "redirect-to-https"
+    compress               = true
+
+    cache_policy_id            = data.aws_cloudfront_cache_policy.caching_optimized.id
+    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security_headers.id
+  }
+
+
+  # Ordered Behavior 2: Route /api/* to the backend
   # This rule is checked BEFORE the default_cache_behavior.
   ordered_cache_behavior {
     path_pattern     = "/api/*"
