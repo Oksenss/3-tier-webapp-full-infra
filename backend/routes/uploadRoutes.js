@@ -91,7 +91,7 @@ const s3 = new AWS.S3({
 router.post("/", upload.single("image"), async (req, res) => {
   // Use the NODE_ENV variable set in the ECS Task Definition to determine behavior.
   // Default to "DEV" if it's not set.
-  const nodeEnv = process.env.NODE_ENV || "DEV";
+  const nodeEnv = process.env.ENV || "DEV";
 
   // Check if a file was actually uploaded.
   if (!req.file) {
