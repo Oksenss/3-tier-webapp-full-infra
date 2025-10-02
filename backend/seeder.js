@@ -295,7 +295,7 @@ const seedProducts = async (adminUserId) => {
             console.log(`- Image "${s3Key}" not found in S3. Uploading...`);
             const imagePath = path.resolve(
               process.cwd(),
-              `../frontend/public/images/${imageName}`
+              `./seed-images/${imageName}`
             );
 
             if (!fs.existsSync(imagePath)) {
