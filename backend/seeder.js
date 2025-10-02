@@ -202,7 +202,7 @@ const seedAdminUser = async () => {
     let adminEmail, initialPassword;
 
     // Check if we're in DEV environment
-    if (process.env.NODE_ENV === "DEV") {
+    if (process.env.ENV === "DEV") {
       // Use default dev credentials
       adminEmail = "admin@email.com";
       initialPassword = "123456";
@@ -264,7 +264,7 @@ const seedProducts = async (adminUserId) => {
     }
 
     // --- NEW: S3 Image Seeding Logic ---
-    const nodeEnv = process.env.NODE_ENV || "DEV";
+    const nodeEnv = process.env.ENV || "DEV";
     if (nodeEnv !== "DEV") {
       console.log(
         "AWS environment detected. Checking and seeding images to S3..."
