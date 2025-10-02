@@ -354,27 +354,6 @@ resource "aws_iam_role_policy_attachment" "ecs_secrets_manager_access" {
 
 
 
-# # Some policy changes
-# resource "aws_iam_policy" "s3_image_upload_policy" {
-#   name        = "${var.name_prefix}-s3-image-upload-policy"
-#   description = "Allow ECS tasks to upload product images to S3"
-
-#   policy = jsonencode({
-#     Version = "2012-10-17",
-#     Statement = [
-#       {
-#         Effect = "Allow",
-#         Action = [
-#           "s3:PutObject",
-#           "s3:PutObjectAcl", # Required to set public-read if needed, though we use CF
-#           "s3:GetObject", 
-#           "s3:HeadObject"
-#         ],
-#         Resource = "${var.image_bucket_arn}/*"
-#       }
-#     ]
-#   })
-# }
 
 # In modules/ecs/main.tf
 
@@ -402,7 +381,7 @@ resource "aws_iam_policy" "s3_image_upload_policy" {
         Action = [
           "s3:ListBucket"
         ],
-        Resource = var.image_bucket_arn # Note: No "/*" at the end
+        Resource = var.image_bucket_arn 
       }
     ]
   })
