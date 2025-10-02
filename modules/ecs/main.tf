@@ -367,7 +367,8 @@ resource "aws_iam_policy" "s3_image_upload_policy" {
         Action = [
           "s3:PutObject",
           "s3:PutObjectAcl", # Required to set public-read if needed, though we use CF
-          "s3:GetObject"     # Good to have for potential debugging
+          "s3:GetObject", 
+          "s3:HeadObject"
         ],
         Resource = "${var.image_bucket_arn}/*"
       }
