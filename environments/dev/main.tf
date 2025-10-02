@@ -143,6 +143,8 @@ module "security_groups" {
 module "s3_site" {
   source = "../../modules/s3-cloudfront-site"
 
+  force_destroy = true # OK for dev, but must be false in prod
+
   bucket_name = local.domain_name
   tags = {
     Environment = local.environment
