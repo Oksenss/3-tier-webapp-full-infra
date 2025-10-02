@@ -15,7 +15,7 @@ terraform {
     }
   }
   backend "s3" {
-    bucket         = "my-blue-green-depl-tf-state"
+    bucket         = "my-blue-green-depl-tf-state" # <---- Use your bucket name
     key            = "tf-state-dev"
     region         = "eu-central-1"
     use_lockfile = true
@@ -45,10 +45,11 @@ data "aws_availability_zones" "available" {
 
 locals {
     dev_azs = slice(data.aws_availability_zones.available.names, 0, 2)
-    domain_name = "dev.my-database-vector-ai.click" # <--- DEFINE YOUR DOMAIN HERE
+    domain_name = "dev.my-database-vector-ai.click" # <---- DEFINE YOUR DOMAIN HERE
     environment = "dev"
-    parent_domain_name  = "my-database-vector-ai.click"
+    parent_domain_name  = "my-database-vector-ai.click" # <---- DEFINE YOUR DOMAIN HERE
     prefix = "dev"
+    image_bucket_name = "${local.prefix}-proshop-images"
 }
 
 
@@ -59,6 +60,9 @@ data "aws_route53_zone" "primary" {
   name         = local.parent_domain_name
   private_zone = false
 }
+
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 
 
 #############################
@@ -99,14 +103,9 @@ module "nat" {
   vpc_id             = module.vpc.vpc_id
   public_subnet_ids  = module.vpc.public_subnet_ids
 
-  # REMOVE this line. The NAT module no longer needs to know about subnets.
-  # private_subnet_ids = module.vpc.private_subnet_ids 
-
-  # ADD this line. This passes the route tables created by the VPC module
-  # into the NAT module so it can add its route.
   private_route_table_ids = module.vpc.private_route_table_ids
 
-  single_nat_gateway = true  # Cost optimization for dev
+  single_nat_gateway = true  
 
   tags = {
     Environment = local.environment
@@ -186,6 +185,10 @@ module "cdn" {
   # with the real ALB domain name from our backend module.
   backend_origin_domain = module.alb.alb_dns_name
 
+  image_bucket_name        = module.s3_images.bucket_id
+  image_bucket_domain_name = module.s3_images.bucket_domain_name
+
+
   tags = { Environment = local.environment }
 }
 
@@ -214,7 +217,28 @@ data "aws_iam_policy_document" "s3_policy_document" {
   }
 }
 
-data "aws_caller_identity" "current" {}
+resource "aws_s3_bucket_policy" "allow_cloudfront_images" {
+  bucket = module.s3_images.bucket_id
+  policy = data.aws_iam_policy_document.s3_images_policy_document.json
+}
+
+data "aws_iam_policy_document" "s3_images_policy_document" {
+  statement {
+    actions   = ["s3:GetObject"]
+    resources = ["${module.s3_images.bucket_arn}/*"] # Policy applies to objects inside /images folder
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = ["arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/${module.cdn.distribution_id}"]
+    }
+  }
+}
 
 
 # Create the final DNS "A" record to point our domain to the CloudFront distribution
@@ -229,7 +253,18 @@ resource "aws_route53_record" "site_dns" {
     evaluate_target_health = false
   }
 }
+#############################
+# 4. S3 Images   #
+#############################
 
+module "s3_images" {
+  source = "../../modules/s3-images"
+
+  bucket_name = local.image_bucket_name
+  tags = {
+    Environment = local.environment
+  }
+}
 
 ######################################
 ######################################
@@ -316,6 +351,9 @@ module "ecs" {
   name_prefix       = local.prefix
   aws_region        = var.aws_region
 
+  image_bucket_arn = module.s3_images.bucket_arn
+
+
   # Networking
   private_subnet_ids     = module.vpc.private_subnet_ids
   ecs_security_group_ids = [module.security_groups.ecs_tasks_security_group_id]
@@ -342,20 +380,23 @@ module "ecs" {
     {
       name  = "DOCUMENTDB_USERNAME"
       value = "devadmin"
-    }
+    },
+    {
+      name  = "AWS_IMAGES_BUCKET_NAME"
+      value = module.s3_images.bucket_id
+    },
   ]
   
   # Pass secrets from Secrets Manager
   container_secrets = merge({
-    "DOCUMENTDB_PASSWORD" = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:dev/docdb/master_password"
-    "PORT" = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:dev/proshop/app_secrets-aWBmop:PORT::"
-    "PAYPAL_CLIENT_ID" = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:dev/proshop/app_secrets-aWBmop:PAYPAL_CLIENT_ID::"
-    "JWT_SECRET" = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:dev/proshop/app_secrets-aWBmop:JWT_SECRET::"
-    "ENV" = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:dev/proshop/app_secrets-aWBmop:ENV::"
+    "DOCUMENTDB_PASSWORD" = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:dev/docdb/master_password"
+    "PORT" = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:dev/proshop/app_secrets-aWBmop:PORT::"
+    "PAYPAL_CLIENT_ID" = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:dev/proshop/app_secrets-aWBmop:PAYPAL_CLIENT_ID::"
+    "JWT_SECRET" = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:dev/proshop/app_secrets-aWBmop:JWT_SECRET::"
+    "ENV" = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:dev/proshop/app_secrets-aWBmop:ENV::"
   }, {
-      # This is our newly added secret!
       # The key "ADMIN_CREDENTIALS" will become the environment variable name.
-      "ADMIN_CREDENTIALS" = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:prod/credentials/proshop-EzZIV4"
+      "ADMIN_CREDENTIALS" = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:prod/credentials/proshop-EzZIV4"
     })
   
   

@@ -53,7 +53,9 @@ resource "aws_nat_gateway" "main" {
 }
 
 
-
+#########################################################
+# AWS Route for NAT Gateway                             #
+#########################################################
 
 resource "aws_route" "private_nat_gateway_route" {
   # We loop through each private route table passed in.

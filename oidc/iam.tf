@@ -20,7 +20,6 @@ provider "aws" {
 }
 
 # GitHub Actions OIDC Provider
-# NOTE: This resource is unique per AWS account. We will import the existing one.
 resource "aws_iam_openid_connect_provider" "github_actions" {
   url = "https://token.actions.githubusercontent.com"
 
@@ -28,8 +27,7 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
     "sts.amazonaws.com"
   ]
 
-  # MODIFIED: Updated to the latest thumbprints recommended by AWS.
-  # Terraform will automatically pick the one that matches.
+  # Updated to the latest thumbprints recommended by AWS.
   thumbprint_list = [
     "6938fd4d98bab03faadb97b34396831e3780aea1",
     "1c58a3a8518e8759bf075b76b750d4f2df264fcd"
@@ -38,7 +36,6 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
 
 # IAM Role for GitHub Actions
 resource "aws_iam_role" "github_actions" {
-  # MODIFIED: Made the role name unique to this project.
   name = "GitHubActions-blue-green-infra"
 
   assume_role_policy = jsonencode({
@@ -55,8 +52,7 @@ resource "aws_iam_role" "github_actions" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            # This correctly targets your blue-green repo
-            "token.actions.githubusercontent.com:sub" = "repo:Oksenss/blue-green:*"
+            "token.actions.githubusercontent.com:sub" = "repo:Oksenss/3-tier-webapp-full-infra:*"
           }
         }
       }

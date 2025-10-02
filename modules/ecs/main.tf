@@ -104,9 +104,7 @@ resource "aws_iam_role_policy_attachment" "codedeploy_policy_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS"
 }
 
-#########################################
-#########################################
-#########################################
+
 
 #########################################################
 # ECS Cluster & Task Definition                        #
@@ -172,10 +170,6 @@ resource "aws_ecs_task_definition" "app" {
 #########################################################
 # ECS Service & Load Balancing                         #
 #########################################################
-
-###########################################################
-# NEW - ECS Service with CodeDeploy Blue/Green Deployment #
-###########################################################
 
 resource "aws_ecs_service" "app" {
   name    = "${var.name_prefix}-app-service"
@@ -358,3 +352,64 @@ resource "aws_iam_role_policy_attachment" "ecs_secrets_manager_access" {
   policy_arn = aws_iam_policy.secrets_manager_access.arn
 }
 
+
+
+# # Some policy changes
+# resource "aws_iam_policy" "s3_image_upload_policy" {
+#   name        = "${var.name_prefix}-s3-image-upload-policy"
+#   description = "Allow ECS tasks to upload product images to S3"
+
+#   policy = jsonencode({
+#     Version = "2012-10-17",
+#     Statement = [
+#       {
+#         Effect = "Allow",
+#         Action = [
+#           "s3:PutObject",
+#           "s3:PutObjectAcl", # Required to set public-read if needed, though we use CF
+#           "s3:GetObject", 
+#           "s3:HeadObject"
+#         ],
+#         Resource = "${var.image_bucket_arn}/*"
+#       }
+#     ]
+#   })
+# }
+
+# In modules/ecs/main.tf
+
+resource "aws_iam_policy" "s3_image_upload_policy" {
+  name        = "${var.name_prefix}-s3-image-upload-policy"
+  description = "Allow ECS tasks to upload product images to S3"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      # Statement 1: Grants permissions to the OBJECTS in the bucket
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:PutObject",
+          "s3:PutObjectAcl",
+          "s3:GetObject",
+          "s3:HeadObject"
+        ],
+        Resource = "${var.image_bucket_arn}/*"
+      },
+      # Statement 2 (NEW): Grants permissions to the BUCKET itself
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:ListBucket"
+        ],
+        Resource = var.image_bucket_arn # Note: No "/*" at the end
+      }
+    ]
+  })
+}
+
+### NEW: Attach the policy to the app task role ###
+resource "aws_iam_role_policy_attachment" "app_task_s3_upload" {
+  role       = aws_iam_role.app_task_role.name
+  policy_arn = aws_iam_policy.s3_image_upload_policy.arn
+}

@@ -82,10 +82,6 @@ resource "aws_subnet" "private" {
   }
 }
 
-
-### Private Route Tables
-# Add these new blocks to modules/vpc/main.tf
-
 # Private Route Tables
 resource "aws_route_table" "private" {
   count = length(var.private_subnet_cidrs)
