@@ -2,7 +2,7 @@
 
 ## What is this project?
 
-This project demonstrates a production-ready Multi-AZ infrastructure setup for a MERN e-commerce app using Terraform and AWS. It supports multi-environment deployments (dev/prod), blue-green deployments, and GitHub Actions CI/CD with OIDC authentication
+This project demonstrates a production-ready Multi-AZ infrastructure setup for a MERN e-commerce app using Terraform and AWS. It supports multi-environment setup (dev/prod), blue-green deployments, and GitHub Actions CI/CD with OIDC authentication
 
 ![Architecture Diagram](multi-az-aws-infra.png)
 
@@ -130,8 +130,115 @@ Used for both envs though can be split into two if needed (used for creating adm
 
 ### Creating S3 bucket
 
-Creating s3 bucket is necessary for terraform state management and state locking. You can choose default options with enabled versioning
+Creating s3 bucket manually is necessary for terraform state management and state locking. You can choose default options with enabled versioning
 
-Make sure this bucket exists before running `terraform init` in any environment
+Requirements:
 
-To be continued
+1. Make sure this bucket exists before running `terraform init` in any environment and in both environments (dev, prod) add your bucket name you just created.
+
+```hcl
+ backend "s3" {
+    bucket         = "my-blue-green-depl-tf-state" # <---- Use your bucket name
+    key            = "tf-state-dev"
+    region         = "eu-central-1"
+    use_lockfile = true
+    encrypt = true
+  }
+```
+
+2. Purchase a domain from route 53 or use an existing one. Add your domain name in both environments (dev, prod) in locals.
+
+**NOTE**: for cost savings buy domain ending with .click
+
+```hcl
+locals {
+    dev_azs = slice(data.aws_availability_zones.available.names, 0, 2)
+    domain_name = "dev.my-database-vector-ai.click" # <---- DEFINE YOUR DOMAIN HERE
+    environment = "dev"
+    parent_domain_name  = "my-database-vector-ai.click" # <---- DEFINE YOUR DOMAIN HERE
+    prefix = "dev"
+    image_bucket_name = "${local.prefix}-proshop-images"
+}
+```
+
+For first dev infra launch go to
+
+```hcl
+cd environments/dev
+terraform init
+terraform apply
+```
+
+For first prod infra launch go to
+
+```hcl
+cd environments/prod <br>
+terraform init <br>
+terraform apply
+```
+
+For OIDC setup required for github actions to authenticate with aws
+
+```hcl
+cd oidc
+terraform init
+terraform apply
+```
+
+### GitHub Actions CI/CD Setup
+
+For this repo:
+
+- Create a new develop branch
+- Set develop branch as default branch
+- Protect main branch, and develop branch (require pull request reviews before merging, require status checks to pass before merging - select both workflows)
+
+Here is the list of necessary env variables to add in your github repo secrets
+
+- AWS_REGION - your aws region
+- AWS_ROLE_TO_ASSUME - your role arn for github actions to assume (the arn of OIDC role)
+- CLOUDFRONT_DISTRIBUTION_ID - cloudfront distribution id for prod (shown in outputs after terraform apply)
+- CODEDEPLOY_APP_NAME - codedeploy app name for prod
+- CODEDEPLOY_DEPLOYMENT_GROUP_NAME - codedeploy deployment group name for prod
+- DEV_AWS_ROLE_TO_ASSUME - your role arn for github actions to assume (the arn of OIDC role) for dev env
+- DEV_CLOUDFRONT_DISTRIBUTION_ID - cloudfront distribution id for dev (shown in outputs after terraform apply)
+- DEV_ECR_REPOSITORY - ecr repo name for dev
+- DEV_ECS_CLUSTER_NAME - ecs cluster name for dev
+- DEV_ECS_SERVICE_NAME - ecs service name for dev
+- DEV_S3_BUCKET_NAME - s3 bucket name for dev (frontend url)
+- ECR_REPOSITORY - ecr repo name for prod
+- ECS_CLUSTER_NAME - ecs cluster name for prod
+- ECS_SERVICE_NAME - ecs service name for prod
+- ECS_TASK_FAMILY - ecs task family for prod
+- S3_BUCKET_NAME - s3 bucket name for prod (frontend url)
+- TF_STATE_BUCKET - your s3 bucket name for terraform state management
+
+## Cleanup [IMPORTANT]
+
+To destroy all associated infrastructure for an environment:
+
+```hcl
+cd environments/dev or prod
+terraform destroy
+```
+
+License and Acknowledgments
+The fundamental application code (MERN stack frontend and backend) used in this infrastructure demonstration is based on the Proshop-v2 project originally developed by Brad Traversy of Traversy Media. The complete infrastructure setup, Terraform modules, CI/CD configuration, and environment management demonstrated in this repository are independently developed and built on this project.
+
+#### Minor issues
+
+- Product data seeding in the production environment may occasionally process duplicate entries. This behavior is related to the backend layer and was intentionally scoped out, prioritizing the development of the multi-environment infrastructure and CI/CD automation demonstrated here.
+
+### License for Application Code (Frontend & Backend)
+
+The application code is provided under the following license:
+
+The MIT License
+
+Copyright (c) 2023 Traversy Media https://traversymedia.com
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

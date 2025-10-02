@@ -5,9 +5,10 @@
 Deploys a containerized application to AWS Fargate, incorporating all necessary supporting infrastructure for production use, including IAM roles, logging, autoscaling, and secure secrets injection.
 
 - Core Resources: Creates the ECS Cluster (`aws_ecs_cluster.main`), Task Definition (`aws_ecs_task_definition.app`), and Service (`aws_ecs_service.app`).
-- Security & IAM: Sets up two necessary IAM roles:
+- Security & IAM: Sets up three necessary IAM roles:
   - Task Execution Role: Used by ECS to pull images and write logs. Includes a policy to allow reading secrets from Secrets Manager.
   - Application Task Role: Used by the application inside the container to access other AWS services.
+  - S3 Images Role: Grants access to s3 bucket for uploading and modifying images.
 - Secrets Integration: Securely injects environment variables directly from AWS Secrets Manager into the container definition.
 - Observability: Creates a dedicated CloudWatch Log Group (`aws_cloudwatch_log_group.app`) and configures the container logging driver.
 - High Availability: Implements optional CPU-based target tracking autoscaling (`aws_appautoscaling_policy.cpu_scaling`).
