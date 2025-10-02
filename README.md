@@ -172,8 +172,8 @@ terraform apply
 For first prod infra launch go to
 
 ```hcl
-cd environments/prod <br>
-terraform init <br>
+cd environments/prod
+terraform init
 terraform apply
 ```
 
@@ -228,6 +228,13 @@ The fundamental application code (MERN stack frontend and backend) used in this 
 #### Minor issues
 
 - Product data seeding in the production environment may occasionally process duplicate entries. This behavior is related to the backend layer and was intentionally scoped out, prioritizing the development of the multi-environment infrastructure and CI/CD automation demonstrated here.
+
+#### 💰 Estimated AWS Costs
+
+**Development Environment:** ~$50-80/month
+**Production Environment:** ~$120-200/month
+
+_Costs vary based on traffic and usage. Use AWS Cost Calculator for precise estimates._
 
 ### License for Application Code (Frontend & Backend)
 
