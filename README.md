@@ -231,8 +231,8 @@ The fundamental application code (MERN stack frontend and backend) used in this 
 
 #### 💰 Estimated AWS Costs
 
-**Development Environment:** ~$50-80/month
-**Production Environment:** ~$120-200/month
+**Development Environment:** ~$80-100/month
+**Production Environment:** ~$140-240/month
 
 _Costs vary based on traffic and usage. Use AWS Cost Calculator for precise estimates._
 
