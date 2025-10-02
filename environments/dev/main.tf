@@ -61,6 +61,9 @@ data "aws_route53_zone" "primary" {
   private_zone = false
 }
 
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 
 #############################
 # 4. VPC Module Usage     #
@@ -214,9 +217,6 @@ data "aws_iam_policy_document" "s3_policy_document" {
   }
 }
 
-data "aws_caller_identity" "current" {}
-
-
 resource "aws_s3_bucket_policy" "allow_cloudfront_images" {
   bucket = module.s3_images.bucket_id
   policy = data.aws_iam_policy_document.s3_images_policy_document.json
@@ -225,7 +225,7 @@ resource "aws_s3_bucket_policy" "allow_cloudfront_images" {
 data "aws_iam_policy_document" "s3_images_policy_document" {
   statement {
     actions   = ["s3:GetObject"]
-    resources = ["${module.s3_images.bucket_arn}/images/*"] # Policy applies to objects inside /images folder
+    resources = ["${module.s3_images.bucket_arn}/*"] # Policy applies to objects inside /images folder
 
     principals {
       type        = "Service"
@@ -389,15 +389,14 @@ module "ecs" {
   
   # Pass secrets from Secrets Manager
   container_secrets = merge({
-    "DOCUMENTDB_PASSWORD" = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:dev/docdb/master_password"
-    "PORT" = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:dev/proshop/app_secrets-aWBmop:PORT::"
-    "PAYPAL_CLIENT_ID" = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:dev/proshop/app_secrets-aWBmop:PAYPAL_CLIENT_ID::"
-    "JWT_SECRET" = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:dev/proshop/app_secrets-aWBmop:JWT_SECRET::"
-    "ENV" = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:dev/proshop/app_secrets-aWBmop:ENV::"
+    "DOCUMENTDB_PASSWORD" = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:dev/docdb/master_password"
+    "PORT" = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:dev/proshop/app_secrets-aWBmop:PORT::"
+    "PAYPAL_CLIENT_ID" = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:dev/proshop/app_secrets-aWBmop:PAYPAL_CLIENT_ID::"
+    "JWT_SECRET" = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:dev/proshop/app_secrets-aWBmop:JWT_SECRET::"
+    "ENV" = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:dev/proshop/app_secrets-aWBmop:ENV::"
   }, {
-      # This is our newly added secret!
       # The key "ADMIN_CREDENTIALS" will become the environment variable name.
-      "ADMIN_CREDENTIALS" = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:prod/credentials/proshop-EzZIV4"
+      "ADMIN_CREDENTIALS" = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:prod/credentials/proshop-EzZIV4"
     })
   
   

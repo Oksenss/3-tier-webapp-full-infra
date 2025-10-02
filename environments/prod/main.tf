@@ -48,6 +48,7 @@ locals {
     parent_domain_name = "my-database-vector-ai.click" # ### MODIFIED ### - Added for consistency
     environment        = "prod"
     prefix             = "prod" # ### ADDED ### - Added for consistency
+    image_bucket_name  = "${local.prefix}-proshop-images" # Will be "prod-proshop-images"
 }
 
 #############################
@@ -58,7 +59,8 @@ data "aws_route53_zone" "primary" {
   private_zone = false
 }
 
-
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 
 #############################
 # 4. VPC Module Usage     #
@@ -86,8 +88,7 @@ module "ecr" {
 
   repository_name = "project1-prod"
   scan_on_push    = true # Enable scanning to catch issues before prod
-  # force_delete defaults to false, which is what we want
-  force_delete = true
+  force_delete = true # [REAL PROD SETTING] false
 }
 
 #############################
@@ -141,7 +142,7 @@ module "s3_site" {
   source = "../../modules/s3-cloudfront-site"
 
   # false for prod to prevent accidental deletions
-  force_destroy = true
+  force_destroy = true # [REAL PROD SETTING] false
   bucket_name = local.domain_name
   tags = {
     Environment = local.environment
@@ -188,6 +189,9 @@ module "cdn" {
   # with the real ALB domain name from our backend module.
   backend_origin_domain = module.alb.alb_dns_name
 
+  image_bucket_name        = module.s3_images.bucket_id
+  image_bucket_domain_name = module.s3_images.bucket_domain_name
+
   tags = { Environment = local.environment }
 }
 
@@ -218,6 +222,30 @@ data "aws_iam_policy_document" "s3_policy_document" {
 
 data "aws_caller_identity" "current" {}
 
+resource "aws_s3_bucket_policy" "allow_cloudfront_images" {
+  bucket = module.s3_images.bucket_id
+  policy = data.aws_iam_policy_document.s3_images_policy_document.json
+}
+
+data "aws_iam_policy_document" "s3_images_policy_document" {
+  statement {
+    actions   = ["s3:GetObject"]
+    resources = ["${module.s3_images.bucket_arn}/*"] # Policy applies to objects inside /images folder
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = ["arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/${module.cdn.distribution_id}"]
+    }
+  }
+}
+
+
 
 # Create the final DNS "A" record to point our domain to the CloudFront distribution
 resource "aws_route53_record" "site_dns" {
@@ -229,6 +257,19 @@ resource "aws_route53_record" "site_dns" {
     name                   = module.cdn.distribution_domain_name
     zone_id                = module.cdn.distribution_hosted_zone_id
     evaluate_target_health = false
+  }
+}
+#############################
+# 4. S3 Images   #
+#############################
+
+
+module "s3_images" {
+  source = "../../modules/s3-images"
+
+  bucket_name = local.image_bucket_name
+  tags = {
+    Environment = local.environment
   }
 }
 
@@ -263,8 +304,8 @@ module "docdb" {
   maintenance_window          = "sun:04:00-sun:05:00"  # Sunday morning maintenance
   
   # Production security and reliability settings
-  # skip_final_snapshot          = false  # Always create final snapshot in prod
-  # enable_deletion_protection   = true   # Protect against accidental deletion
+  # skip_final_snapshot          = false  # [REAL PROD SETTING] Always create final snapshot in 
+  # enable_deletion_protection   = true   # [REAL PROD SETTING] Protect against accidental deletion in 
   skip_final_snapshot          = true  # Always create final snapshot in prod
   enable_deletion_protection   = false   # Protect against accidental deletion
   apply_immediately            = false  # Use maintenance windows for changes
@@ -313,7 +354,7 @@ module "alb" {
   health_check_path = "/api/health"
 
   # Production-ready settings
-  # enable_deletion_protection     = true  # CRITICAL for production
+  # enable_deletion_protection     = true  # [REAL PROD SETTING] CRITICAL for production
   enable_deletion_protection = false
   enable_http_redirect         = true  # Good practice to redirect HTTP to HTTPS
   enable_cross_zone_load_balancing = true  # Recommended for high availability
@@ -333,6 +374,9 @@ module "ecs" {
 
   ### MODIFIED ###
   enable_blue_green_deployment = true
+
+  image_bucket_arn = module.s3_images.bucket_arn
+
   
   # Wire the ALB and listeners to the ECS module
   prod_listener_arn         = module.alb.https_listener_arn
@@ -347,7 +391,6 @@ module "ecs" {
   # Networking
   private_subnet_ids     = module.vpc.private_subnet_ids
   ecs_security_group_ids = [module.security_groups.ecs_tasks_security_group_id]
-  # lb_target_group_arn    = module.alb.target_group_arn 
   
   # Container & Task Definition
   container_image      = "${module.ecr.repository_url}:latest" # This will be overwritten by CI/CD
@@ -370,20 +413,25 @@ module "ecs" {
     {
       name  = "DOCUMENTDB_USERNAME"
       value = "prodadmin"
+    }, 
+    {
+      # Tells the backend which S3 bucket to upload to
+      name  = "AWS_IMAGES_BUCKET_NAME"
+      value = module.s3_images.bucket_id
     }
   ]
   
   # Pass secrets from Secrets Manager. Note we are using PRODUCTION secrets.
   container_secrets = merge({
-    "DOCUMENTDB_PASSWORD" = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:prod/docdb/master_password"
+    "DOCUMENTDB_PASSWORD" = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:prod/docdb/master_password"
     # The following secrets are from 'prod/proshop/app_secrets' based on your screenshot
-    "PORT"                = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:prod/proshop/app_secrets:PORT::"
-    "PAYPAL_CLIENT_ID"    = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:prod/proshop/app_secrets:PAYPAL_CLIENT_ID::"
-    "JWT_SECRET"          = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:prod/proshop/app_secrets:JWT_SECRET::"
-    "ENV"                 = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:prod/proshop/app_secrets:ENV::"
+    "PORT"                = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:prod/proshop/app_secrets:PORT::"
+    "PAYPAL_CLIENT_ID"    = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:prod/proshop/app_secrets:PAYPAL_CLIENT_ID::"
+    "JWT_SECRET"          = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:prod/proshop/app_secrets:JWT_SECRET::"
+    "ENV"                 = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:prod/proshop/app_secrets:ENV::"
   }, {
       # This is our newly added admin secret for the prod environment
-      "ADMIN_CREDENTIALS" = "arn:aws:secretsmanager:eu-central-1:034362039294:secret:prod/credentials/proshop-EzZIV4"
+      "ADMIN_CREDENTIALS" = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:prod/credentials/proshop-EzZIV4"
     })
   
   # Production-ready service & autoscaling configuration (UNCHANGED)

@@ -78,7 +78,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     domain_name = var.image_bucket_domain_name
 
     # Remove the `/images` prefix when requesting from S3
-    origin_path = "/images" 
+    # origin_path = "/images" 
 
     # Connect this origin to the new images OAC
     origin_access_control_id = aws_cloudfront_origin_access_control.images_oac.id
